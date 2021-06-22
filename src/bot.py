@@ -7,8 +7,12 @@ from aiogram import Bot, Dispatcher, executor, types
 from aiogram.contrib.fsm_storage.memory import MemoryStorage
 from aiogram.dispatcher.filters.state import State, StatesGroup
 from aiogram.dispatcher.storage import FSMContext
-from aiogram.types import (InlineKeyboardButton, InlineKeyboardMarkup,
-                           KeyboardButton, ReplyKeyboardMarkup)
+from aiogram.types import (
+    InlineKeyboardButton,
+    InlineKeyboardMarkup,
+    KeyboardButton,
+    ReplyKeyboardMarkup,
+)
 
 from func import get_compliments
 from utils import check_mark, validate_time
@@ -44,7 +48,9 @@ async def bot_start(message: types.Message):
 @dp.message_handler(state=SetupStates.time)
 async def set_time(message: types.Message, state: FSMContext):
     time = message.text
-    days = (await state.get_data())["days"]
+    state_data = await state.get_data()
+    days = state_data["days"]
+    message = state_data["message"]
 
     if not validate_time(time):
         await message.answer(
@@ -55,10 +61,10 @@ async def set_time(message: types.Message, state: FSMContext):
 
     await state.finish()
     await message.answer("Compliment days are successfully set!")
-    await start_complimenting(message, days, time)
+    await start_complimenting(message.chat.id, days, time)
 
 
-async def start_complimenting(message: types.Message, days: list, time: str = "9:00"):
+async def start_complimenting(chat_id: str, days: list, time: str = "9:00"):
     """
     Function for scheduling compliments.
     """
@@ -69,7 +75,7 @@ async def start_complimenting(message: types.Message, days: list, time: str = "9
         choosen_topic = choice(compliment_topics)
         choosen_compliment = choice(compliments[choosen_topic])
 
-        await message.answer(f"*{choosen_topic}*\n{choosen_compliment}")
+        await bot.send_message(chat_id, f"*{choosen_topic}*\n{choosen_compliment}")
 
     day_schedulers = [
         aioschedule.every().monday,
@@ -81,11 +87,11 @@ async def start_complimenting(message: types.Message, days: list, time: str = "9
         aioschedule.every().sunday,
     ]
 
-    aioschedule.clear(message.chat.id)
+    aioschedule.clear(chat_id)
 
     for idx, day in enumerate(day_schedulers):
         if days[idx]:
-            day.at(time).do(task).tag(message.chat.id)
+            day.at(time).do(task).tag(chat_id)
 
     while True:
         await aioschedule.run_pending()
@@ -114,14 +120,14 @@ async def get_schedules(message: types.Message):
 async def set_days(message: types.Message):
     markup = InlineKeyboardMarkup()
     buttons = [
-        InlineKeyboardButton("Mon - ✅", callback_data="btn-0-1"),
-        InlineKeyboardButton("Tue - ✅", callback_data="btn-1-1"),
-        InlineKeyboardButton("Wed - ✅", callback_data="btn-2-1"),
-        InlineKeyboardButton("Thu - ✅", callback_data="btn-3-1"),
-        InlineKeyboardButton("Fri - ✅", callback_data="btn-4-1"),
-        InlineKeyboardButton("Sat - ✅", callback_data="btn-5-1"),
-        InlineKeyboardButton("Sun - ✅", callback_data="btn-6-1"),
-        InlineKeyboardButton("Submit", callback_data="btn-submit"),
+        InlineKeyboardButton("Mon - ✅", callback_data="day-0-1"),
+        InlineKeyboardButton("Tue - ✅", callback_data="day-1-1"),
+        InlineKeyboardButton("Wed - ✅", callback_data="day-2-1"),
+        InlineKeyboardButton("Thu - ✅", callback_data="day-3-1"),
+        InlineKeyboardButton("Fri - ✅", callback_data="day-4-1"),
+        InlineKeyboardButton("Sat - ✅", callback_data="day-5-1"),
+        InlineKeyboardButton("Sun - ✅", callback_data="day-6-1"),
+        InlineKeyboardButton("Next", callback_data="day-next"),
     ]
 
     for btn in buttons:
@@ -132,21 +138,32 @@ async def set_days(message: types.Message):
     await message.reply(text, reply_markup=markup)
 
 
-@dp.callback_query_handler(lambda c: c.data and c.data.startswith("btn"))
-async def btn_callback_handler(callback_query: types.CallbackQuery, state: FSMContext):
+@dp.callback_query_handler(lambda c: c.data and c.data.startswith("day"))
+async def day_callback_handler(callback_query: types.CallbackQuery, state: FSMContext):
     cb_data = callback_query.data
 
-    if cb_data.split("-")[1] == "submit":
+    if cb_data.split("-")[1] == "next":
         markup = callback_query.message.reply_markup
         compliment_days_data = [
             btn[0].text.split(" - ")[1] == "✅" for btn in markup.inline_keyboard[:-1]
         ]
 
-        # await bot.answer_callback_query(callback_query.id, "Submitted!")
+        time_markup = InlineKeyboardMarkup().add(
+            *[
+                InlineKeyboardButton(f"{i}:00", callback_data=f"time-{i}")
+                for i in range(24)
+            ]
+        )
+
+        await callback_query.message.edit_text(
+            "Choose time for compliments:", reply_markup=time_markup
+        )
+
         await state.update_data(days=compliment_days_data)
-        await callback_query.message.answer("Enter the time")
+        await state.update_data(message=callback_query.message)
         await SetupStates.time.set()
-        # await start_complimenting(callback_query.message, compliment_days_data)
+        await callback_query.answer()
+
         return
 
     button_code = int(cb_data.split("-")[1])
@@ -155,10 +172,26 @@ async def btn_callback_handler(callback_query: types.CallbackQuery, state: FSMCo
     markup = callback_query.message.reply_markup
     btn = markup.inline_keyboard[button_code][0]
     btn.text = f"{btn.text.split(' - ')[0]} - {check_mark(not button_value)}"
-    btn.callback_data = f"btn-{button_code}-{int(not button_value)}"
+    btn.callback_data = f"day-{button_code}-{int(not button_value)}"
 
     await callback_query.message.edit_reply_markup(markup)
-    await bot.answer_callback_query(callback_query.id)
+    await callback_query.answer()
+
+
+@dp.callback_query_handler(
+    lambda c: c.data and c.data.startswith("time"), state=SetupStates.time
+)
+async def time_callback_handler(callback_query: types.CallbackQuery, state: FSMContext):
+    cb_data = callback_query.data
+    time = f"{cb_data.split('-')[1]}:00"
+    state_data = await state.get_data()
+    days = state_data["days"]
+
+    await state.finish()
+    await callback_query.answer("Done!")
+    await start_complimenting(callback_query.message.chat.id, days, time)
+
+    await callback_query.answer()
 
 
 if __name__ == "__main__":
