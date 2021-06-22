@@ -7,7 +7,7 @@ from pymemcache.client import base
 
 def get_compliments():
     """
-    Function gets a dict of compliment grouped by its types.
+    Function gets a dict of compliments grouped by its types.
     """
 
     URL = "https://www.verywellmind.com/positivity-boosting-compliments-1717559"
