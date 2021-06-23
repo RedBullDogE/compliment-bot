@@ -12,7 +12,7 @@ def check_mark(state: bool):
 def validate_time(time: str):
     """
     Helper function for validating string time. Specified string
-    should match the following format: 
+    should match the following format:
         hh:mm
     or
         h:mm
@@ -31,6 +31,30 @@ def validate_time(time: str):
     return True
 
 
+def format_schedule(days: list, time: str):
+    """
+    Helper function for transforming day and time data into string.
+    """
+
+    weekday_list = [
+        "Monday",
+        "Tuesday",
+        "Wednesday",
+        "Thursday",
+        "Friday",
+        "Saturday",
+        "Sunday",
+    ]
+
+    weekdays = ", ".join([wd for wd, d in zip(weekday_list, days) if d])
+
+    if weekdays == "":
+        return "Oh, you won't receive compliments :("
+
+
+    return f"Well! You'll receive compliments on {weekdays} at exactly {time} c;"
+
+
 @dataclass
 class Messages:
     """
@@ -38,6 +62,7 @@ class Messages:
 
     TODO: move all bot messages to this class
     """
+
     start: str = "From now on I stop making compliments! I hope see you soon ^^"
     day_setup: str = "Day Setup (default: everyday)"
     time_setup: str = ""
