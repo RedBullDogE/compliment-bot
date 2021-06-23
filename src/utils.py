@@ -1,12 +1,14 @@
-from dataclasses import dataclass
 import re
+from dataclasses import dataclass
+
+from emoji import emojize
 
 
 def check_mark(state: bool):
     """
     Returns emoji with a check mark if state is True, otherwise - a cross
     """
-    return "✅" if state else "❌"
+    return emojize(":check_mark_button:") if state else emojize(":cross_mark:")
 
 
 def validate_time(time: str):
@@ -46,26 +48,70 @@ def format_schedule(days: list, time: str):
         "Sunday",
     ]
 
-    weekdays = ", ".join([wd for wd, d in zip(weekday_list, days) if d])
+    weekdays = ", ".join(
+        [
+            emojize(f"\n:check_mark_button: {wd}")
+            if d
+            else emojize(f"\n:cross_mark: {wd}")
+            for wd, d in zip(weekday_list, days)
+        ]
+    )
 
     if weekdays == "":
-        return "Oh, you won't receive compliments :("
+        return msg.emtry_list_message2
+
+    return msg.success_message.format(weekdays=weekdays, time=time)
 
 
-    return f"Well! You'll receive compliments on {weekdays} at exactly {time} c;"
-
-
-@dataclass
+@dataclass(frozen=True)
 class Messages:
     """
     Dataclass with bot messages
-
-    TODO: move all bot messages to this class
     """
 
-    start: str = "From now on I stop making compliments! I hope see you soon ^^"
-    day_setup: str = "Day Setup (default: everyday)"
-    time_setup: str = ""
+    sch_setup: str = emojize("Schedule setup :calendar:")
+    sch_list: str = emojize("List :notebook:")
+    sch_clear: str = emojize("Clear schedule :broom:")
+    help_str: str = emojize("Help :folded_hands:")
+    contacts: str = emojize("Contacts :notebook:")
+
+    menu_message: str = "Choose your option from bot menu or type /help"
+    days_message: str = emojize(
+        "Firstly, choose any compliment days you want and click on 'Next:right_arrow:':"
+    )
+    time_message: str = "Now, click on the time when you want to receive compliments:"
+    success_message: str = emojize(
+        "Well! You'll receive compliments on: {weekdays}\nat exactly {time} :relieved_face:"
+    )
+    list_message: str = emojize(
+        "Scheduled compliments:\n{weekdays}\nAt {time} :alarm_clock:"
+    )
+    stop_message: str = emojize(
+        "From now on I stop making compliments!\n\nI hope to see you soon :kissing_cat:"
+    )
+    empty_list_message: str = emojize(
+        "You still don't have scheduled compliments!\n"
+        + "Let's change it with /set_days :face_savoring_food:"
+    )
+    emtry_list_message2: str = emojize(
+        "Oh, you won't receive compliments :pensive_face:"
+    )
+
+@dataclass(frozen=True)
+class ButtonsCaptions:
+    """
+    """
+
+    mon_on: str = emojize("Mon - :check_mark_button:")
+    tue_on: str = emojize("Tue - :check_mark_button:")
+    wed_on: str = emojize("Wed - :check_mark_button:")
+    thu_on: str = emojize("Thu - :check_mark_button:")
+    fri_on: str = emojize("Fri - :check_mark_button:")
+    sat_on: str = emojize("Sat - :check_mark_button:")
+    sun_on: str = emojize("Sun - :check_mark_button:")
+
+    next: str = emojize("Next:right_arrow:")
 
 
+btn_captions = ButtonsCaptions()
 msg = Messages()

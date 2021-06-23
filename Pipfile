@@ -12,6 +12,7 @@ requests = "*"
 aiogram = "*"
 beautifulsoup4 = "*"
 aioschedule = "*"
+emoji = "*"
 
 [requires]
 python_version = "3.8"
