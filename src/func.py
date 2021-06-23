@@ -11,11 +11,11 @@ def get_compliments():
     """
 
     URL = "https://www.verywellmind.com/positivity-boosting-compliments-1717559"
-    memcached_client = base.Client(("localhost", 11211))
-    cached_compliments = memcached_client.get("compliments_dict")
+    # memcached_client = base.Client(("localhost", 11211))
+    # cached_compliments = memcached_client.get("compliments_dict")
 
-    if cached_compliments is not None:
-        return eval(cached_compliments)
+    # if cached_compliments is not None:
+    #     return eval(cached_compliments)
 
     try:
         response = requests.get(URL)
@@ -40,6 +40,6 @@ def get_compliments():
     ]
 
     res = {title: comp_list for title, comp_list in zip(headers, parsed_groups)}
-    memcached_client.set("compliments_dict", str(res).encode("utf-8"))
+    # memcached_client.set("compliments_dict", str(res).encode("utf-8"))
 
     return res

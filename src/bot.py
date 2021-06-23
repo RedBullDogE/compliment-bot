@@ -1,11 +1,12 @@
 import asyncio
 import os
-from random import choice
 from datetime import datetime
+from random import choice
 
 import aioschedule
 from aiogram import Bot, Dispatcher, executor, types
 from aiogram.contrib.fsm_storage.memory import MemoryStorage
+from aiogram.contrib.middlewares.logging import LoggingMiddleware
 from aiogram.dispatcher.filters.state import State, StatesGroup
 from aiogram.dispatcher.storage import FSMContext
 from aiogram.types import (
@@ -23,6 +24,9 @@ API_TOKEN = os.getenv("BOT_TOKEN")
 
 bot = Bot(token=API_TOKEN)
 dp = Dispatcher(bot, storage=MemoryStorage())
+dp.middleware.setup(LoggingMiddleware())
+
+print(datetime.now())
 
 
 class SetupStates(StatesGroup):
@@ -144,6 +148,7 @@ async def get_schedules(message: types.Message):
     Called by /list command or 'List' message text.
     """
 
+    print(aioschedule.jobs)
     tasks = [task for task in aioschedule.jobs if message.chat.id in task.tags]
 
     if not tasks:
@@ -221,8 +226,6 @@ async def time_callback_handler(callback_query: types.CallbackQuery, state: FSMC
     await callback_query.answer("Done!")
     await callback_query.message.edit_text(format_schedule(days, time))
     await start_complimenting(callback_query.message.chat.id, days, time)
-
-    await callback_query.answer()
 
 
 if __name__ == "__main__":
