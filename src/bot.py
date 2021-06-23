@@ -1,14 +1,19 @@
 import asyncio
 import os
 from random import choice
+from datetime import datetime
 
 import aioschedule
 from aiogram import Bot, Dispatcher, executor, types
 from aiogram.contrib.fsm_storage.memory import MemoryStorage
 from aiogram.dispatcher.filters.state import State, StatesGroup
 from aiogram.dispatcher.storage import FSMContext
-from aiogram.types import (InlineKeyboardButton, InlineKeyboardMarkup,
-                           KeyboardButton, ReplyKeyboardMarkup)
+from aiogram.types import (
+    InlineKeyboardButton,
+    InlineKeyboardMarkup,
+    KeyboardButton,
+    ReplyKeyboardMarkup,
+)
 from emoji.core import emojize
 
 from func import get_compliments
@@ -75,12 +80,29 @@ async def start_complimenting(chat_id: str, days: list, time: str = "9:00"):
     """
 
     async def task():
+        now_time = datetime.now().time()
+        hour = now_time.hour
+
+        if hour < 4 or hour > 22:
+            greeting = msg.night_greeting
+        elif hour < 12:
+            greeting = msg.morning_greeting
+        elif hour < 17:
+            greeting = msg.day_greeting
+        else:
+            greeting = msg.evening_greeting
+
         compliments = get_compliments()
         compliment_topics = list(compliments.keys())
         choosen_topic = choice(compliment_topics)
         choosen_compliment = choice(compliments[choosen_topic])
 
-        await bot.send_message(chat_id, f"*{choosen_topic}*\n{choosen_compliment}")
+        await bot.send_message(
+            chat_id,
+            msg.compliment_message.format(
+                greeting=greeting, compliment=choosen_compliment
+            ),
+        )
 
     day_schedulers = [
         aioschedule.every().monday,
@@ -131,7 +153,9 @@ async def get_schedules(message: types.Message):
     result = "\n".join([emojize(f":diamond_suit: {t.start_day}") for t in tasks])
 
     await message.reply(
-        msg.list_message.format(weekdays=result, time=tasks[-1].at_time.strftime('%H:%M'))
+        msg.list_message.format(
+            weekdays=result, time=tasks[-1].at_time.strftime("%H:%M")
+        )
     )
 
 

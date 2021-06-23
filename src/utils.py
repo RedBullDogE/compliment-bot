@@ -97,10 +97,24 @@ class Messages:
         "Oh, you won't receive compliments :pensive_face:"
     )
 
+    morning_greeting: str = emojize("Goooooood morning! :smiling_face_with_halo:")
+    day_greeting: str = emojize("Hey, cutie! :smiling_face_with_heart-eyes:")
+    evening_greeting: str = emojize("Good evening, honey! :smiling_face_with_hearts:")
+    night_greeting: str = emojize(
+        "Are you sleeping? :sleeping_face: "
+        + "Goodnight, sweety :kissing_face_with_closed_eyes:"
+    )
+
+    compliment_message: str = emojize(
+        ":glowing_star::glowing_star::glowing_star:\n\n"
+        + "{greeting}\n\nOn this beautiful day I want to tell you:\n\n{compliment}\n\n"
+        + ":red_heart:"
+    )
+
+
 @dataclass(frozen=True)
 class ButtonsCaptions:
-    """
-    """
+    """ """
 
     mon_on: str = emojize("Mon - :check_mark_button:")
     tue_on: str = emojize("Tue - :check_mark_button:")
