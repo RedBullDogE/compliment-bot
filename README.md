@@ -1,7 +1,7 @@
 # Compliment bot
 Scheduled compliments by Telegram Bot. The project is written with aiogram + RethinkDB
 
-This bot allows users to set a schedule for receiving compliments by days of week and specific time.
+This bot allows users to set a schedule for receiving compliments by days of week and specific time. Demo version can be viewed [here](https://t.me/cutie_compliment_bot) (but I'm not sure).
 
 ## Tech stack
 * `Python`
