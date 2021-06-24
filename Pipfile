@@ -13,6 +13,7 @@ aiogram = "*"
 beautifulsoup4 = "*"
 aioschedule = "*"
 emoji = "*"
+rethinkdb = "*"
 
 [requires]
 python_version = "3.8"

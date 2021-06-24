@@ -63,6 +63,21 @@ def format_schedule(days: list, time: str):
     return msg.success_message.format(weekdays=weekdays, time=time)
 
 
+def wrap_class_methods(function_decorator):
+    """
+    Decorator-function for classes. Wraps all methods of a class
+    except those that start with double-score (__)
+    """
+
+    def decorator(cls):
+        for name, obj in vars(cls).items():
+            if callable(obj) and not name.startswith("__"):
+                setattr(cls, name, function_decorator(obj))
+        return cls
+
+    return decorator
+
+
 @dataclass(frozen=True)
 class Messages:
     """
