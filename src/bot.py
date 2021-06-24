@@ -1,4 +1,5 @@
 import asyncio
+import logging
 import os
 from datetime import datetime
 from random import choice
@@ -6,28 +7,23 @@ from random import choice
 import aioschedule
 from aiogram import Bot, Dispatcher, executor, types
 from aiogram.contrib.fsm_storage.memory import MemoryStorage
-from aiogram.contrib.middlewares.logging import LoggingMiddleware
 from aiogram.dispatcher.filters.state import State, StatesGroup
 from aiogram.dispatcher.storage import FSMContext
-from aiogram.types import (
-    InlineKeyboardButton,
-    InlineKeyboardMarkup,
-    KeyboardButton,
-    ReplyKeyboardMarkup,
-)
+from aiogram.types import (InlineKeyboardButton, InlineKeyboardMarkup,
+                           KeyboardButton, ReplyKeyboardMarkup)
 from emoji.core import emojize
 
 from func import get_compliments
+from storage import Storage
 from utils import btn_captions, check_mark, format_schedule, msg
 
 API_TOKEN = os.getenv("BOT_TOKEN")
 
 bot = Bot(token=API_TOKEN)
 dp = Dispatcher(bot, storage=MemoryStorage())
-dp.middleware.setup(LoggingMiddleware())
 
-print(datetime.now())
-
+db = Storage()
+logging.basicConfig(level=logging.INFO)
 
 class SetupStates(StatesGroup):
     time = State()
@@ -38,6 +34,8 @@ async def bot_start(message: types.Message):
     """
     Message handler for /start command. Initialize bot menu.
     """
+
+    logging.info(f"{message.from_user.id} ({message.from_user.username}) - starts bot")
 
     sch_setup_btn = KeyboardButton(msg.sch_setup)
     list_btn = KeyboardButton(msg.sch_list)
@@ -135,7 +133,8 @@ async def stop_complimenting(message: types.Message):
     """
     Message handler for stoping making compliments. Called by /stop command
     """
-
+    logging.info(f"{message.from_user.id} ({message.from_user.username}) - stops bot")
+    db.delete(message.chat.id)
     aioschedule.clear(message.chat.id)
     await message.reply(msg.stop_message)
 
@@ -148,9 +147,8 @@ async def get_schedules(message: types.Message):
     Called by /list command or 'List' message text.
     """
 
-    print(aioschedule.jobs)
     tasks = [task for task in aioschedule.jobs if message.chat.id in task.tags]
-
+    print("\n".join(map(str, aioschedule.jobs)))
     if not tasks:
         await message.reply(msg.empty_list_message)
         return
@@ -190,10 +188,10 @@ async def day_callback_handler(callback_query: types.CallbackQuery, state: FSMCo
             msg.time_message, reply_markup=time_markup
         )
 
+        await callback_query.answer()
         await state.update_data(days=compliment_days_data)
         await state.update_data(message=callback_query.message)
         await SetupStates.time.set()
-        await callback_query.answer()
 
         return
 
@@ -205,8 +203,8 @@ async def day_callback_handler(callback_query: types.CallbackQuery, state: FSMCo
     btn.text = f"{btn.text.split(' - ')[0]} - {check_mark(not button_value)}"
     btn.callback_data = f"day-{button_code}-{int(not button_value)}"
 
-    await callback_query.message.edit_reply_markup(markup)
     await callback_query.answer()
+    await callback_query.message.edit_reply_markup(markup)
 
 
 @dp.callback_query_handler(
@@ -222,11 +220,26 @@ async def time_callback_handler(callback_query: types.CallbackQuery, state: FSMC
     state_data = await state.get_data()
     days = state_data["days"]
 
+    logging.info(
+        f"{callback_query.from_user.id} ({callback_query.from_user.username})"
+        + " - has scheduled compliments:\n"
+        + f"{days} at {time}"
+    )
+
     await state.finish()
     await callback_query.answer("Done!")
     await callback_query.message.edit_text(format_schedule(days, time))
+    
+    db.add(callback_query.message.chat.id, days, time)
     await start_complimenting(callback_query.message.chat.id, days, time)
 
 
 if __name__ == "__main__":
+    saved_data = db.get_all()
+    logging.info("Restore all scheduled compliments")
+    for rec in saved_data:
+        asyncio.ensure_future(start_complimenting(**rec))
+    
+
+    logging.info("Bot starting...")
     executor.start_polling(dp, skip_updates=True)
