@@ -4,7 +4,10 @@ import os
 from datetime import datetime
 from random import choice
 
-import aioschedule
+# import aioschedule
+from apscheduler.triggers.cron import CronTrigger
+from apscheduler.triggers.combining import OrTrigger
+from apscheduler.schedulers.asyncio import AsyncIOScheduler
 from aiogram import Bot, Dispatcher, executor, types
 from aiogram.contrib.fsm_storage.memory import MemoryStorage
 from aiogram.dispatcher.filters.state import State, StatesGroup
@@ -28,6 +31,9 @@ dp = Dispatcher(bot, storage=MemoryStorage())
 
 db = Storage()
 logging.basicConfig(level=logging.INFO)
+
+scheduler = AsyncIOScheduler()
+scheduler.start()
 
 
 class SetupStates(StatesGroup):
@@ -56,7 +62,7 @@ async def bot_start(message: types.Message):
 
 
 @dp.message_handler(lambda message: message.text == msg.sch_setup)
-@dp.message_handler(commands=["set_days"])
+@dp.message_handler(commands=["setup"])
 async def set_days(message: types.Message):
     """
     Message handler for setting compliment days. Allows the user to choose days
@@ -111,25 +117,21 @@ async def start_complimenting(chat_id: str, days: list, time: str = "9:00"):
             ),
         )
 
-    day_schedulers = [
-        aioschedule.every().monday,
-        aioschedule.every().tuesday,
-        aioschedule.every().wednesday,
-        aioschedule.every().thursday,
-        aioschedule.every().friday,
-        aioschedule.every().saturday,
-        aioschedule.every().sunday,
-    ]
+    hour = int(time.split(":")[0])
+    minute = int(time.split(":")[1])
 
-    aioschedule.clear(chat_id)
+    if scheduler.get_job(str(chat_id)):
+        scheduler.remove_job(str(chat_id))
 
-    for idx, day in enumerate(day_schedulers):
-        if days[idx]:
-            day.at(time).do(task).tag(chat_id)
+    trigger_list = []
 
-    while True:
-        await aioschedule.run_pending()
-        await asyncio.sleep(1)
+    for idx, day in enumerate(days):
+        if day:
+            trigger_list.append(CronTrigger(day_of_week=idx, hour=hour, minute=minute))
+
+    trigger = OrTrigger(trigger_list)
+
+    scheduler.add_job(task, trigger, id=str(chat_id))
 
 
 @dp.message_handler(lambda message: message.text == msg.sch_clear)
@@ -140,30 +142,30 @@ async def stop_complimenting(message: types.Message):
     """
     logging.info(f"{message.from_user.id} ({message.from_user.username}) - stops bot")
     db.delete(message.chat.id)
-    aioschedule.clear(message.chat.id)
+    if scheduler.get_job(str(message.chat.id)):
+        scheduler.remove_job(str(message.chat.id))
     await message.reply(msg.stop_message)
 
 
 @dp.message_handler(lambda message: message.text == msg.sch_list)
 @dp.message_handler(commands=["list"])
-async def help_command(message: types.Message):
+async def get_list(message: types.Message):
     """
     Message handler for getting all scheduled compliments by currend user.
     Called by /list command or 'List' message text.
     """
 
-    tasks = [task for task in aioschedule.jobs if message.chat.id in task.tags]
-    if not tasks:
-        await message.reply(msg.empty_list_message)
-        return
+    data = db.get(message.chat.id)
 
-    result = "\n".join([emojize(f":diamond_suit: {t.start_day}") for t in tasks])
+    if data:
+        days = data["days"]
+        time = data["time"]
 
-    await message.reply(
-        msg.list_message.format(
-            weekdays=result, time=tasks[-1].at_time.strftime("%H:%M")
-        )
-    )
+        result = format_schedule(days, time, msg.list_message)
+
+        return await message.reply(result)
+    else:
+        return await message.reply(msg.empty_list_message)
 
 
 @dp.message_handler(lambda message: message.text == msg.help_str)
@@ -250,7 +252,9 @@ async def time_callback_handler(callback_query: types.CallbackQuery, state: FSMC
 
     await state.finish()
     await callback_query.answer("Done!")
-    await callback_query.message.edit_text(format_schedule(days, time))
+    await callback_query.message.edit_text(
+        format_schedule(days, time, msg.success_message)
+    )
 
     db.add(callback_query.message.chat.id, days, time)
     await start_complimenting(callback_query.message.chat.id, days, time)

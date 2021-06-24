@@ -33,7 +33,7 @@ def validate_time(time: str):
     return True
 
 
-def format_schedule(days: list, time: str):
+def format_schedule(days: list, time: str, message: str):
     """
     Helper function for transforming day and time data into string.
     """
@@ -60,7 +60,7 @@ def format_schedule(days: list, time: str):
     if weekdays == "":
         return msg.emtry_list_message2
 
-    return msg.success_message.format(weekdays=weekdays, time=time)
+    return message.format(weekdays=weekdays, time=time)
 
 
 def wrap_class_methods(function_decorator):
@@ -101,7 +101,7 @@ class Messages:
         "Well! You'll receive compliments on: {weekdays}\nat exactly {time} :relieved_face:"
     )
     list_message: str = emojize(
-        "Scheduled compliments:\n{weekdays}\nAt {time} :alarm_clock:"
+        "Scheduled compliments:\n{weekdays}\n\nAt {time} :alarm_clock:"
     )
     stop_message: str = emojize(
         "From now on I stop making compliments!\n\nI hope to see you soon :kissing_cat:"
@@ -110,7 +110,7 @@ class Messages:
         "You still don't have scheduled compliments!\n"
         + "Let's change it with /set_days :face_savoring_food:"
     )
-    emtry_list_message2: str = emojize(
+    empty_list_message2: str = emojize(
         "Oh, you won't receive compliments :pensive_face:"
     )
     help_message: str = (

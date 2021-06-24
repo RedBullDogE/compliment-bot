@@ -11,9 +11,9 @@ pymemcache = "*"
 requests = "*"
 aiogram = "*"
 beautifulsoup4 = "*"
-aioschedule = "*"
 emoji = "*"
 rethinkdb = "*"
+apscheduler = "*"
 
 [requires]
 python_version = "3.8"
