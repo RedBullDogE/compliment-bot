@@ -9,8 +9,12 @@ from aiogram import Bot, Dispatcher, executor, types
 from aiogram.contrib.fsm_storage.memory import MemoryStorage
 from aiogram.dispatcher.filters.state import State, StatesGroup
 from aiogram.dispatcher.storage import FSMContext
-from aiogram.types import (InlineKeyboardButton, InlineKeyboardMarkup,
-                           KeyboardButton, ReplyKeyboardMarkup)
+from aiogram.types import (
+    InlineKeyboardButton,
+    InlineKeyboardMarkup,
+    KeyboardButton,
+    ReplyKeyboardMarkup,
+)
 from emoji.core import emojize
 
 from func import get_compliments
@@ -24,6 +28,7 @@ dp = Dispatcher(bot, storage=MemoryStorage())
 
 db = Storage()
 logging.basicConfig(level=logging.INFO)
+
 
 class SetupStates(StatesGroup):
     time = State()
@@ -141,14 +146,13 @@ async def stop_complimenting(message: types.Message):
 
 @dp.message_handler(lambda message: message.text == msg.sch_list)
 @dp.message_handler(commands=["list"])
-async def get_schedules(message: types.Message):
+async def help_command(message: types.Message):
     """
     Message handler for getting all scheduled compliments by currend user.
     Called by /list command or 'List' message text.
     """
 
     tasks = [task for task in aioschedule.jobs if message.chat.id in task.tags]
-    print("\n".join(map(str, aioschedule.jobs)))
     if not tasks:
         await message.reply(msg.empty_list_message)
         return
@@ -160,6 +164,24 @@ async def get_schedules(message: types.Message):
             weekdays=result, time=tasks[-1].at_time.strftime("%H:%M")
         )
     )
+
+
+@dp.message_handler(lambda message: message.text == msg.help_str)
+@dp.message_handler(commands=["help"])
+async def help_command(message: types.Message):
+    """
+    Message handler for help command. Returns help info.
+    """
+    await message.reply(msg.help_message)
+
+
+@dp.message_handler(lambda message: message.text == msg.contacts)
+@dp.message_handler(commands=["contacts"])
+async def contacts_command(message: types.Message):
+    """
+    Message handler for contacts command.
+    """
+    await message.reply(msg.contacts_message)
 
 
 @dp.callback_query_handler(lambda c: c.data and c.data.startswith("day"))
@@ -229,7 +251,7 @@ async def time_callback_handler(callback_query: types.CallbackQuery, state: FSMC
     await state.finish()
     await callback_query.answer("Done!")
     await callback_query.message.edit_text(format_schedule(days, time))
-    
+
     db.add(callback_query.message.chat.id, days, time)
     await start_complimenting(callback_query.message.chat.id, days, time)
 
@@ -239,7 +261,6 @@ if __name__ == "__main__":
     logging.info("Restore all scheduled compliments")
     for rec in saved_data:
         asyncio.ensure_future(start_complimenting(**rec))
-    
 
     logging.info("Bot starting...")
     executor.start_polling(dp, skip_updates=True)

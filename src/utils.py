@@ -84,12 +84,14 @@ class Messages:
     Dataclass with bot messages
     """
 
+    # Main Menu button text
     sch_setup: str = emojize("Schedule setup :calendar:")
     sch_list: str = emojize("List :notebook:")
     sch_clear: str = emojize("Clear schedule :broom:")
     help_str: str = emojize("Help :folded_hands:")
     contacts: str = emojize("Contacts :notebook:")
 
+    # Messages
     menu_message: str = "Choose your option from bot menu or type /help"
     days_message: str = emojize(
         "Firstly, choose any compliment days you want and click on 'Next:right_arrow:':"
@@ -111,7 +113,20 @@ class Messages:
     emtry_list_message2: str = emojize(
         "Oh, you won't receive compliments :pensive_face:"
     )
+    help_message: str = (
+        "To use this bot, you only need to set up the days of compliments "
+        + "and the time of sending. Scheduling is available using the command /set_days\n\n"
+        + "/list - get all compliment days and time\n"
+        + "/stop - stop complimenting\n"
+        + "/contacts - get author's contacts\n\n"
+        + "Also you can use all these features with menu buttons!"
+    )
 
+    contacts_message: str = emojize(
+        "This bot was developed with love by @redbulldog :face_blowing_a_kiss:"
+    )
+
+    # Daytime greetings
     morning_greeting: str = emojize("Goooooood morning! :smiling_face_with_halo:")
     day_greeting: str = emojize("Hey, cutie! :smiling_face_with_heart-eyes:")
     evening_greeting: str = emojize("Good evening, honey! :smiling_face_with_hearts:")
