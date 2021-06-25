@@ -7,10 +7,15 @@ This bot allows users to set a schedule for receiving compliments by days of wee
 * `Python`
 * `aiogram`
 * `RethinkDB` as database
-* `aioschedule` as scheduler
+* `APScheduler` as scheduler
 
 ## Issues
 Using the bot can be accompanied by some issues. Some notable ones:
-* Aioschedule sometimes duplicates messages (it's better to replece it with Celery or anything else).
 * The bot uses an external source (website) to get compliments. If this website is not available, the bot won't work properly.
 * It is also possible to use a cache for requests to the compliment source, but it needs additional configuration.
+* Time zones are not taken into account when creating a schedule. The bot uses the time zone of the server it is running on.
+
+## Could be improved
+* Support for different languages
+* Support for multiple compliment sources
+* Add more flexible time scheduling: with configurable minutes and more frequent complimenting (e.g. twice a day)
